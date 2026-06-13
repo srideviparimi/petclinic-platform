@@ -1,0 +1,5 @@
+# Copy this file to terraform.tfvars and adjust as needed.
+# terraform.tfvars is gitignored and must not be committed.
+aws_region  = "eu-central-1"
+environment = "prod"
+project     = "petclinic"
