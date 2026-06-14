@@ -64,3 +64,14 @@ output "kubeconfig_command" {
   description = "Command to configure kubectl for dev cluster"
   value       = module.eks.kubeconfig_command
 }
+
+# ECR outputs
+output "ecr_repository_urls" {
+  description = "Map of service name to ECR repository URL (dev)"
+  value       = module.ecr.repository_urls
+}
+
+output "ecr_repository_arns" {
+  description = "Map of service name to ECR repository ARN (dev)"
+  value       = module.ecr.repository_arns
+}
