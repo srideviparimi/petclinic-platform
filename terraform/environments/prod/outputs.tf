@@ -1,3 +1,4 @@
+# VPC outputs
 output "vpc_id" {
   description = "Prod VPC ID"
   value       = module.vpc.vpc_id
@@ -26,4 +27,40 @@ output "rds_sg_id" {
 output "alb_sg_id" {
   description = "Prod ALB security group ID"
   value       = module.vpc.alb_sg_id
+}
+
+# EKS outputs
+output "cluster_name" {
+  description = "Prod EKS cluster name"
+  value       = module.eks.cluster_name
+}
+
+output "cluster_endpoint" {
+  description = "Prod EKS API server endpoint"
+  value       = module.eks.cluster_endpoint
+}
+
+output "cluster_ca_certificate" {
+  description = "Prod cluster CA certificate (base64)"
+  value       = module.eks.cluster_ca_certificate
+}
+
+output "oidc_provider_arn" {
+  description = "Prod OIDC provider ARN (for IRSA)"
+  value       = module.eks.oidc_provider_arn
+}
+
+output "oidc_provider_url" {
+  description = "Prod OIDC provider URL (for IRSA trust policies)"
+  value       = module.eks.oidc_provider_url
+}
+
+output "node_role_arn" {
+  description = "Prod EKS node IAM role ARN"
+  value       = module.eks.node_role_arn
+}
+
+output "kubeconfig_command" {
+  description = "Command to configure kubectl for prod cluster"
+  value       = module.eks.kubeconfig_command
 }

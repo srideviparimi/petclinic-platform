@@ -66,6 +66,18 @@ variable "node_disk_size" {
   default     = 20
 }
 
+variable "public_access_cidrs" {
+  description = "CIDR blocks allowed to reach the EKS public API endpoint. Default allows all — restrict to known admin CIDRs in a hardened environment."
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
+variable "admin_iam_principal_arn" {
+  description = "IAM principal ARN to grant cluster-admin access via EKS access entry. Defaults to the identity running Terraform."
+  type        = string
+  default     = null
+}
+
 variable "tags" {
   description = "Additional tags to merge onto all resources"
   type        = map(string)
