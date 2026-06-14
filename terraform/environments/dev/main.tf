@@ -1,7 +1,10 @@
-# Dev environment root module.
-# Module calls are added here as each infrastructure component is built:
-#   - VPC module (PETPLAT-6, PETPLAT-8, PETPLAT-9)
-#   - EKS module (PETPLAT-12, PETPLAT-13, PETPLAT-15)
-#   - ECR module (PETPLAT-18, PETPLAT-20)
-#   - RDS module (PETPLAT-22, PETPLAT-23, PETPLAT-25)
-#   - Secrets module (PETPLAT-33)
+module "vpc" {
+  source = "../../modules/vpc"
+
+  project     = var.project
+  environment = var.environment
+  vpc_cidr    = "10.0.0.0/16"
+
+  public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+  availability_zones  = ["eu-central-1a", "eu-central-1b"]
+}
