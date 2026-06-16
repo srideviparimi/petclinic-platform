@@ -39,3 +39,21 @@ module "ecr" {
 
   image_tag_mutability = "IMMUTABLE"
 }
+
+module "rds" {
+  source = "../../modules/rds"
+
+  project     = var.project
+  environment = var.environment
+
+  subnet_ids        = module.vpc.public_subnet_ids
+  security_group_id = module.vpc.rds_sg_id
+
+  instance_class          = "db.t4g.micro"
+  allocated_storage       = 20
+  max_allocated_storage   = 20
+  multi_az                = false
+  backup_retention_period = 30
+  skip_final_snapshot     = false
+  deletion_protection     = false
+}

@@ -1,22 +1,20 @@
-# RDS module outputs — defined here as the interface contract, implemented in PETPLAT-22 and PETPLAT-23.
+output "endpoint" {
+  description = "RDS instance hostname (without port)"
+  value       = aws_db_instance.main.address
+  sensitive   = true
+}
 
-# output "endpoint" {
-#   description = "RDS instance endpoint hostname"
-#   value       = aws_db_instance.main.address
-# }
+output "port" {
+  description = "RDS instance port"
+  value       = aws_db_instance.main.port
+}
 
-# output "port" {
-#   description = "RDS port (3306)"
-#   value       = aws_db_instance.main.port
-# }
+output "db_instance_id" {
+  description = "RDS instance identifier"
+  value       = aws_db_instance.main.id
+}
 
-# output "db_instance_id" {
-#   description = "RDS instance identifier"
-#   value       = aws_db_instance.main.identifier
-# }
-
-# output "secret_arn" {
-#   description = "Secrets Manager secret ARN for RDS credentials"
-#   value       = aws_secretsmanager_secret.rds_credentials.arn
-#   sensitive   = true
-# }
+output "secret_arn" {
+  description = "ARN of the Secrets Manager secret holding RDS credentials (JSON: username, password)"
+  value       = aws_secretsmanager_secret.rds_credentials.arn
+}

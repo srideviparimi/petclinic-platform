@@ -1,26 +1,31 @@
 variable "project" {
-  description = "Project name used in resource naming"
+  description = "Project name used in resource naming and tagging"
   type        = string
   default     = "petclinic"
 }
 
 variable "environment" {
-  description = "Environment name (dev or prod)"
+  description = "Deployment environment (dev or prod)"
   type        = string
+
+  validation {
+    condition     = contains(["dev", "prod"], var.environment)
+    error_message = "environment must be 'dev' or 'prod'."
+  }
 }
 
 variable "subnet_ids" {
-  description = "Subnet IDs for the RDS DB subnet group (public subnets)"
+  description = "List of subnet IDs for the RDS DB subnet group (minimum 2, in different AZs)"
   type        = list(string)
 }
 
 variable "security_group_id" {
-  description = "RDS security group ID (allows 3306 from EKS node SG only)"
+  description = "Security group ID to attach to the RDS instance (allows 3306 from EKS node SG only)"
   type        = string
 }
 
 variable "instance_class" {
-  description = "RDS instance class (db.t4g.micro is free-tier eligible)"
+  description = "RDS instance class"
   type        = string
   default     = "db.t4g.micro"
 }
@@ -32,31 +37,31 @@ variable "allocated_storage" {
 }
 
 variable "max_allocated_storage" {
-  description = "Maximum autoscale storage in GB"
+  description = "Maximum storage in GB — set equal to allocated_storage to disable autoscaling"
   type        = number
   default     = 20
 }
 
 variable "multi_az" {
-  description = "Enable Multi-AZ deployment (false for cost optimization in learning env)"
+  description = "Enable Multi-AZ deployment"
   type        = bool
   default     = false
 }
 
 variable "backup_retention_period" {
-  description = "Backup retention in days (7 for dev, 30 for prod)"
+  description = "Number of days to retain automated backups (0 disables backups)"
   type        = number
   default     = 7
 }
 
 variable "skip_final_snapshot" {
-  description = "Skip final snapshot on deletion (true for dev, false for prod)"
+  description = "Skip final snapshot when the DB instance is deleted (true for dev, false for prod)"
   type        = bool
   default     = true
 }
 
 variable "deletion_protection" {
-  description = "Enable deletion protection"
+  description = "Enable deletion protection on the RDS instance"
   type        = bool
   default     = false
 }

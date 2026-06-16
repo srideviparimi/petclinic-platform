@@ -75,3 +75,25 @@ output "ecr_repository_arns" {
   description = "Map of service name to ECR repository ARN (dev)"
   value       = module.ecr.repository_arns
 }
+
+# RDS outputs
+output "rds_endpoint" {
+  description = "Dev RDS instance hostname"
+  value       = module.rds.endpoint
+  sensitive   = true
+}
+
+output "rds_port" {
+  description = "Dev RDS instance port"
+  value       = module.rds.port
+}
+
+output "rds_instance_id" {
+  description = "Dev RDS instance identifier"
+  value       = module.rds.db_instance_id
+}
+
+output "rds_secret_arn" {
+  description = "Dev RDS credentials secret ARN (Secrets Manager)"
+  value       = module.rds.secret_arn
+}
