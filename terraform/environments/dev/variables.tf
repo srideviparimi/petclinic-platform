@@ -22,6 +22,13 @@ variable "domain_name" {
     default     = "petclinic-dev.click"
 }
 
+variable "openai_api_key" {
+  description = "OpenAI API key for the GenAI service. Pass via TF_VAR_openai_api_key env var or -var flag — never commit to git."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "alb_dns_name" {
   description = "ALB DNS name for the Route 53 alias record. Leave empty on the first apply (before the ingress creates the ALB). Re-apply with this value once the ALB is provisioned."
   type        = string

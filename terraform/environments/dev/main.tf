@@ -58,6 +58,17 @@ module "rds" {
   deletion_protection     = false
 }
 
+module "secrets" {
+  source = "../../modules/secrets"
+
+  project     = var.project
+  environment = var.environment
+
+  openai_api_key    = var.openai_api_key
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
+}
+
 module "dns" {
   source = "../../modules/dns"
 

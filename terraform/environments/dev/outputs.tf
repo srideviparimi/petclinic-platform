@@ -98,6 +98,18 @@ output "rds_secret_arn" {
   value       = module.rds.secret_arn
 }
 
+# Secrets outputs
+output "eso_role_arn" {
+  description = "Dev External Secrets Operator IRSA role ARN (annotate external-secrets-sa ServiceAccount with this)"
+  value       = module.secrets.eso_role_arn
+}
+
+output "openai_secret_arn" {
+  description = "Dev OpenAI API key Secrets Manager ARN"
+  value       = module.secrets.openai_secret_arn
+  sensitive   = true
+}
+
 # DNS outputs
 output "hosted_zone_id" {
   description = "Dev Route 53 hosted zone ID"
