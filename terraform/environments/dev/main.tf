@@ -57,3 +57,20 @@ module "rds" {
   skip_final_snapshot     = true
   deletion_protection     = false
 }
+
+module "dns" {
+  source = "../../modules/dns"
+
+  project     = var.project
+  environment = var.environment
+  domain_name = var.domain_name
+
+  cluster_name      = module.eks.cluster_name
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
+
+  # petclinic-dev.{domain} → ALB
+  record_name  = "dev"
+  alb_dns_name = var.alb_dns_name
+  alb_zone_id  = var.alb_zone_id
+}

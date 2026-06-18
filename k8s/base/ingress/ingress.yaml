@@ -1,0 +1,40 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: petclinic-ingress
+  namespace: petclinic-dev
+  labels:
+    app.kubernetes.io/name: petclinic-ingress
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: ingress
+  annotations:
+    # ALB Ingress Controller provisions an internet-facing ALB for this resource.
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    # ip target-type sends traffic directly to pod IPs (requires VPC CNI).
+    alb.ingress.kubernetes.io/target-type: ip
+    # ACM certificate ARN — replace with the value from Terraform output certificate_arn.
+    # Run: terraform -chdir=terraform/environments/dev output -raw certificate_arn
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:eu-central-1:231351515075:certificate/50b6ccef-e2a8-4802-b950-c3a79ef190b7"
+    # Open both 80 and 443; the ssl-redirect rule sends HTTP → HTTPS.
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    # Health check — ALB uses this path to determine target health before routing traffic.
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
+    alb.ingress.kubernetes.io/healthcheck-port: "8080"
+    # Use the pre-existing ALB security group from the VPC module.
+    # Replace with the value from Terraform output alb_sg_id.
+    # Run: terraform -chdir=terraform/environments/dev output -raw alb_sg_id
+    alb.ingress.kubernetes.io/security-groups: "sg-02afd52503bf39076"
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 8080

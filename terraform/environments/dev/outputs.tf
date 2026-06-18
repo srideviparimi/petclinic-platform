@@ -97,3 +97,19 @@ output "rds_secret_arn" {
   description = "Dev RDS credentials secret ARN (Secrets Manager)"
   value       = module.rds.secret_arn
 }
+
+# DNS outputs
+output "hosted_zone_id" {
+  description = "Dev Route 53 hosted zone ID"
+  value       = module.dns.zone_id
+}
+
+output "certificate_arn" {
+  description = "Dev ACM wildcard certificate ARN (attach to ALB via Ingress annotation)"
+  value       = module.dns.certificate_arn
+}
+
+output "lb_controller_role_arn" {
+  description = "Dev AWS Load Balancer Controller IRSA role ARN (annotate the Helm ServiceAccount with this)"
+  value       = module.dns.lb_controller_role_arn
+}
