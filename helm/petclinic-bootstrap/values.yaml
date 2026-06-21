@@ -8,6 +8,18 @@ eso:
   # ESO service account created by the ESO Helm install in the external-secrets namespace
   serviceAccountName: external-secrets-sa
 
+externalSecrets:
+  # rds-credentials is always required — DB services cannot start without it
+  rdsCredentials:
+    enabled: true
+
+  # openai-api-key is optional — genai-service falls back to OPENAI_API_KEY=demo when absent.
+  # Set enabled: true only after storing the key in Secrets Manager:
+  #   aws secretsmanager put-secret-value \
+  #     --secret-id petclinic/dev/openai-api-key --secret-string "sk-..."
+  openaiApiKey:
+    enabled: false
+
 waitJob:
   # bitnami/kubectl image — minor version should match cluster Kubernetes version
   image: bitnami/kubectl
