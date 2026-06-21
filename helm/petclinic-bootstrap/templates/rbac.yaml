@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bootstrap-wait
+  namespace: petclinic-{{ .Values.environment }}
+  labels:
+    app.kubernetes.io/name: bootstrap-wait
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+    "helm.sh/hook-weight": "-5"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: bootstrap-secret-reader
+  namespace: petclinic-{{ .Values.environment }}
+  labels:
+    app.kubernetes.io/name: bootstrap-secret-reader
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+    "helm.sh/hook-weight": "-5"
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bootstrap-wait-secret-reader
+  namespace: petclinic-{{ .Values.environment }}
+  labels:
+    app.kubernetes.io/name: bootstrap-wait-secret-reader
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+    "helm.sh/hook-weight": "-5"
+subjects:
+  - kind: ServiceAccount
+    name: bootstrap-wait
+    namespace: petclinic-{{ .Values.environment }}
+roleRef:
+  kind: Role
+  name: bootstrap-secret-reader
+  apiGroup: rbac.authorization.k8s.io

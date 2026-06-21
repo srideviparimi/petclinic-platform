@@ -1,5 +1,3 @@
-environment: prod
-
 # Prod environment overrides — merged AFTER per-service values (takes precedence)
 #
 # Replica counts, HPA, and PDB are declared per service in helm-values/{service}.yaml

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: petclinic-bootstrap
+description: One-time cluster bootstrap — namespaces, ClusterSecretStore, ExternalSecrets, and a wait Job that confirms secrets are synced before the service chart installs begin.
+type: application
+version: 0.1.0

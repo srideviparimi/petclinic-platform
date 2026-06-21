@@ -1,0 +1,16 @@
+awsRegion: eu-central-1
+
+# Environment label applied to namespaces and used in Secrets Manager key paths
+# (petclinic/{environment}/rds-credentials)
+environment: dev
+
+eso:
+  # ESO service account created by the ESO Helm install in the external-secrets namespace
+  serviceAccountName: external-secrets-sa
+
+waitJob:
+  # bitnami/kubectl image — minor version should match cluster Kubernetes version
+  image: bitnami/kubectl
+  tag: "1.32"
+  # Seconds before the wait Job gives up (ESO sync can take 30-60 s after CRDs apply)
+  timeoutSeconds: 300

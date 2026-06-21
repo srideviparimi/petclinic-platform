@@ -38,10 +38,6 @@ initContainers:
       - -c
       - "until wget -qO- http://discovery-server:8761/actuator/health; do sleep 5; done"
 
-externalSecrets:
-  openaiApiKey:
-    enabled: true
-
 autoscaling:
   enabled: true
   minReplicas: 1

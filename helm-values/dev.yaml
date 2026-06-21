@@ -1,7 +1,6 @@
 # Dev environment overrides — merged AFTER per-service values (takes precedence)
 # All services run 1 replica in dev; HPA and PDB are disabled.
 
-environment: dev
 replicaCount: 1
 
 image:

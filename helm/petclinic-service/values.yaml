@@ -1,10 +1,5 @@
 replicaCount: 1
 
-# Set to true to create the namespace as part of this release.
-# Use for manual helm installs. ArgoCD manages its own namespace creation.
-createNamespace: false
-environment: dev  # used as the 'environment' label on the Namespace
-
 image:
   repository: ""
   tag: "latest"
@@ -77,16 +72,3 @@ securityContext:
   runAsUser: 1000
   fsGroup: 1000
 
-externalSecrets:
-  # Set true on ONE service install per cluster to create the ClusterSecretStore (cluster-scoped, created once)
-  createClusterSecretStore: false
-  awsRegion: eu-central-1
-  serviceAccountName: external-secrets-sa  # ESO service account in external-secrets namespace
-
-  # Enable per service that needs RDS credentials (customers, visits, vets)
-  rdsCredentials:
-    enabled: false
-
-  # Enable for genai-service only
-  openaiApiKey:
-    enabled: false
