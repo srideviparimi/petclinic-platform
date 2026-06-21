@@ -1,5 +1,10 @@
 replicaCount: 1
 
+# Set to true to create the namespace as part of this release.
+# Use for manual helm installs. ArgoCD manages its own namespace creation.
+createNamespace: false
+environment: dev  # used as the 'environment' label on the Namespace
+
 image:
   repository: ""
   tag: "latest"
