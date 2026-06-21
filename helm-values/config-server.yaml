@@ -1,0 +1,44 @@
+image:
+  repository: "231351515075.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/config-server"
+  tag: "305a1f1"
+
+service:
+  port: 8888
+
+component: "server"
+springProfiles: "docker"
+
+# Prod default: 2 replicas for HA config distribution; dev.yaml overrides to 1
+replicaCount: 2
+
+configData:
+  GIT_REPO: "https://github.com/spring-petclinic/spring-petclinic-microservices-config"
+
+# Config Server uses /actuator/health for all probes (no /readiness or /liveness endpoints)
+probes:
+  startup:
+    path: /actuator/health
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+  readiness:
+    path: /actuator/health
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  liveness:
+    path: /actuator/health
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# No initContainers — config-server is the first service to start
+initContainers: []
+
+# No HPA for config-server — it is infrastructure, not a stateless service under variable load
+autoscaling:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1

@@ -1,0 +1,38 @@
+image:
+  repository: "231351515075.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/admin-server"
+  tag: "305a1f1"
+
+service:
+  port: 9090
+
+component: "admin"
+springProfiles: "docker"
+
+# 1 replica in both dev and prod — monitoring tool, single replica sufficient
+replicaCount: 1
+
+configData:
+  CONFIG_SERVER_URL: "http://config-server:8888"
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://discovery-server:8761/eureka/"
+
+initContainers:
+  - name: wait-for-config-server
+    image: busybox:1.36
+    command:
+      - sh
+      - -c
+      - "until wget -qO- http://config-server:8888/actuator/health; do sleep 5; done"
+  - name: wait-for-discovery-server
+    image: busybox:1.36
+    command:
+      - sh
+      - -c
+      - "until wget -qO- http://discovery-server:8761/actuator/health; do sleep 5; done"
+
+# No HPA — admin-server load is not user-traffic driven
+autoscaling:
+  enabled: false
+
+# No PDB — monitoring tool, brief disruption acceptable
+podDisruptionBudget:
+  enabled: false

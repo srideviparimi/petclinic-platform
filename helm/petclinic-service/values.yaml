@@ -1,0 +1,73 @@
+replicaCount: 1
+
+image:
+  repository: ""
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8080
+
+# app.kubernetes.io/component label value: server | service | gateway | admin
+component: "service"
+
+# SPRING_PROFILES_ACTIVE value; override per service
+springProfiles: "docker"
+
+# ConfigMap data — all keys injected as env vars via envFrom
+configData: {}
+
+# Secret-sourced env vars
+# secretEnv:
+#   - envVar: SPRING_DATASOURCE_USERNAME
+#     secretName: rds-credentials
+#     secretKey: username
+#     optional: false
+secretEnv: []
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+probes:
+  startup:
+    path: /actuator/health
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+  readiness:
+    path: /actuator/health/readiness
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  liveness:
+    path: /actuator/health/liveness
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# initContainers: list of {name, image, command} — resources and securityContext are fixed by the template
+initContainers: []
+
+serviceAccount:
+  # IRSA role ARN annotation — leave empty if service needs no AWS access
+  irsaRoleArn: ""
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000

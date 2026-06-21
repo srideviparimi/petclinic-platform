@@ -1,0 +1,8 @@
+# Prod environment overrides — merged AFTER per-service values (takes precedence)
+#
+# Replica counts, HPA, and PDB are declared per service in helm-values/{service}.yaml
+# (prod defaults). dev.yaml disables HPA/PDB and forces replicaCount=1.
+# This file applies settings that are universally different in prod vs dev.
+
+image:
+  pullPolicy: Always

@@ -1,0 +1,31 @@
+image:
+  repository: "231351515075.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/discovery-server"
+  tag: "305a1f1"
+
+service:
+  port: 8761
+
+component: "server"
+springProfiles: "docker"
+
+# Prod default: 2 replicas for HA Eureka registry; dev.yaml overrides to 1
+replicaCount: 2
+
+configData:
+  CONFIG_SERVER_URL: "http://config-server:8888"
+
+initContainers:
+  - name: wait-for-config-server
+    image: busybox:1.36
+    command:
+      - sh
+      - -c
+      - "until wget -qO- http://config-server:8888/actuator/health; do sleep 5; done"
+
+# No HPA for discovery-server — Eureka registry is infrastructure, not variable-load service
+autoscaling:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1

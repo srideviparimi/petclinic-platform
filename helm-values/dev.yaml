@@ -1,0 +1,13 @@
+# Dev environment overrides — merged AFTER per-service values (takes precedence)
+# All services run 1 replica in dev; HPA and PDB are disabled.
+
+replicaCount: 1
+
+image:
+  pullPolicy: Always
+
+autoscaling:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false

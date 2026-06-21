@@ -1,0 +1,50 @@
+image:
+  repository: "231351515075.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/customers-service"
+  tag: "305a1f1"
+
+service:
+  port: 8081
+
+component: "service"
+springProfiles: "docker,mysql"
+
+# Prod default: 2 replicas for HA; dev.yaml overrides to 1
+replicaCount: 2
+
+configData:
+  CONFIG_SERVER_URL: "http://config-server:8888"
+  SPRING_DATASOURCE_URL: "jdbc:mysql://petclinic-dev-mysql.cpm0giwisfm1.eu-central-1.rds.amazonaws.com:3306/petclinic"
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://discovery-server:8761/eureka/"
+
+# RDS credentials synced from AWS Secrets Manager via External Secrets Operator
+secretEnv:
+  - envVar: SPRING_DATASOURCE_USERNAME
+    secretName: rds-credentials
+    secretKey: username
+  - envVar: SPRING_DATASOURCE_PASSWORD
+    secretName: rds-credentials
+    secretKey: password
+
+initContainers:
+  - name: wait-for-config-server
+    image: busybox:1.36
+    command:
+      - sh
+      - -c
+      - "until wget -qO- http://config-server:8888/actuator/health; do sleep 5; done"
+  - name: wait-for-discovery-server
+    image: busybox:1.36
+    command:
+      - sh
+      - -c
+      - "until wget -qO- http://discovery-server:8761/actuator/health; do sleep 5; done"
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
