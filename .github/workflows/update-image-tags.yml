@@ -1,0 +1,49 @@
+name: Update Image Tags
+
+# Triggered by the app repo's build-push.yml via repository_dispatch after
+# images are pushed to ECR. Updates helm-values/{service}.yaml for each service
+# in the payload, then commits and pushes so ArgoCD detects the change.
+#
+# No kubectl, no AWS credentials — this workflow only edits YAML and pushes Git.
+
+on:
+  repository_dispatch:
+    types: [app-image-built]
+
+jobs:
+  update-tags:
+    name: Update Helm values with new image tags
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout platform repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install yq
+        uses: mikefarah/yq@v4.44.3
+
+      - name: Update image.tag in helm-values for changed services
+        env:
+          SHA: ${{ github.event.client_payload.sha }}
+          SERVICES: ${{ github.event.client_payload.services }}
+        run: |
+          for service in ${SERVICES}; do
+            echo "Updating helm-values/${service}.yaml → image.tag: ${SHA}"
+            yq -i ".image.tag = \"${SHA}\"" "helm-values/${service}.yaml"
+          done
+
+      - name: Commit and push updated helm-values
+        env:
+          SHA: ${{ github.event.client_payload.sha }}
+          SERVICES: ${{ github.event.client_payload.services }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add helm-values/
+          git diff --cached --quiet && { echo "No helm-values changed — skipping commit"; exit 0; }
+          git commit -m "ci: update image tags to ${SHA} (${SERVICES})"
+          git push
