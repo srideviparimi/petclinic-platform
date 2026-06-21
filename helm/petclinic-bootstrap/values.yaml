@@ -21,8 +21,8 @@ externalSecrets:
     enabled: false
 
 waitJob:
-  # bitnami/kubectl image — minor version should match cluster Kubernetes version
-  image: bitnami/kubectl
-  tag: "1.32"
+  # curlimages/curl — minimal multi-arch image; uses the in-cluster K8s API instead of kubectl
+  image: curlimages/curl
+  tag: "8.11.0"
   # Seconds before the wait Job gives up (ESO sync can take 30-60 s after CRDs apply)
   timeoutSeconds: 300

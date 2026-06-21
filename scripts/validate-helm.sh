@@ -1,3 +1,4 @@
+
 #!/usr/bin/env bash
 # Validates the generic Helm chart for all 8 Petclinic services.
 # For each service × environment: helm lint, helm template, kubectl apply --dry-run=client

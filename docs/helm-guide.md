@@ -7,13 +7,114 @@
 
 ## Table of Contents
 
-1. [Chart Structure](#chart-structure)
-2. [Values Hierarchy](#values-hierarchy)
-3. [Deploy a Service Manually](#deploy-a-service-manually)
-4. [Change Resources, Replicas, or Env Vars](#change-resources-replicas-or-env-vars)
-5. [Add a New Service](#add-a-new-service)
-6. [ArgoCD Integration](#argocd-integration)
-7. [Validate Rendered Output](#validate-rendered-output)
+1. [Bootstrap — One-time Cluster Setup](#bootstrap--one-time-cluster-setup)
+2. [Chart Structure](#chart-structure)
+3. [Values Hierarchy](#values-hierarchy)
+4. [Deploy a Service Manually](#deploy-a-service-manually)
+5. [Change Resources, Replicas, or Env Vars](#change-resources-replicas-or-env-vars)
+6. [Add a New Service](#add-a-new-service)
+7. [ArgoCD Integration](#argocd-integration)
+8. [Validate Rendered Output](#validate-rendered-output)
+
+---
+
+## Bootstrap — One-time Cluster Setup
+
+The `helm/petclinic-bootstrap/` chart handles all prerequisites that must exist before any service chart is installed. It is idempotent — safe to re-run (`helm upgrade --install`).
+
+**What it creates:**
+
+| Resource | Type | Notes |
+|----------|------|-------|
+| `petclinic-dev`, `petclinic-prod` | Namespace | PSA labels: enforce=baseline, warn/audit=restricted |
+| `aws-secrets-manager` | ClusterSecretStore | Points ESO at AWS Secrets Manager in eu-central-1 |
+| `rds-credentials` | ExternalSecret | Syncs RDS username + password from `petclinic/{env}/rds-credentials` |
+| `openai-api-key` | ExternalSecret | Optional — disabled by default (see below) |
+| `wait-for-secrets` | Job (post-install hook) | Polls until K8s Secrets are synced; self-cleans on success |
+
+### Step 1 — Install External Secrets Operator (ESO)
+
+ESO must be installed before the bootstrap chart, as its CRDs (`ClusterSecretStore`, `ExternalSecret`) must be registered first.
+
+```bash
+helm repo add external-secrets https://charts.external-secrets.io
+helm repo update external-secrets
+
+helm upgrade --install external-secrets external-secrets/external-secrets \
+  --namespace external-secrets \
+  --create-namespace \
+  --set installCRDs=true \
+  --wait --timeout 120s
+
+# Verify ESO is running
+kubectl get pods -n external-secrets
+kubectl api-resources | grep external-secrets
+```
+
+### Step 2 — Run the bootstrap chart
+
+```bash
+helm upgrade --install petclinic-bootstrap helm/petclinic-bootstrap/ \
+  --set environment=dev
+```
+
+Helm applies all resources (namespaces, ClusterSecretStore, ExternalSecrets), then the `wait-for-secrets` post-install Job runs automatically. The `helm install` command blocks until the Job completes — meaning ESO has successfully synced all required K8s Secrets.
+
+**Watch the Job logs in another terminal:**
+
+```bash
+kubectl logs -n petclinic-dev job/wait-for-secrets -f
+```
+
+Expected output:
+```
+Bootstrap: waiting for ESO to sync secrets into petclinic-dev...
+  Waiting for secret/rds-credentials...
+  secret/rds-credentials is ready.
+Bootstrap complete — all required secrets synced. Safe to install service charts.
+```
+
+### Step 3 — Verify
+
+```bash
+# Namespaces exist
+kubectl get namespaces petclinic-dev petclinic-prod
+
+# ClusterSecretStore is ready
+kubectl get clustersecretstore aws-secrets-manager
+
+# rds-credentials K8s Secret exists
+kubectl get secret rds-credentials -n petclinic-dev
+
+# Helm release shows deployed
+helm list -A | grep bootstrap
+```
+
+### OpenAI API key (optional)
+
+`openai-api-key` is disabled by default. The genai-service pod starts regardless — it falls back to `OPENAI_API_KEY=demo` when the secret is absent. To enable it once you have the key:
+
+```bash
+# 1. Store in Secrets Manager
+aws secretsmanager put-secret-value \
+  --secret-id petclinic/dev/openai-api-key \
+  --secret-string "sk-..."
+
+# 2. Upgrade bootstrap to create the ExternalSecret
+helm upgrade petclinic-bootstrap helm/petclinic-bootstrap/ \
+  --set environment=dev \
+  --set externalSecrets.openaiApiKey.enabled=true
+
+# 3. Restart genai-service to pick up the new env var
+kubectl rollout restart deployment/genai-service -n petclinic-dev
+```
+
+### Re-run for prod
+
+```bash
+helm upgrade --install petclinic-bootstrap-prod helm/petclinic-bootstrap/ \
+  --set environment=prod
+```
 
 ---
 
