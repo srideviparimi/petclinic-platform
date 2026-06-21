@@ -39,6 +39,11 @@ initContainers: []
 autoscaling:
   enabled: false
 
+# ClusterSecretStore is cluster-scoped and only needs to exist once.
+# config-server is the first service deployed, so it owns this resource.
+externalSecrets:
+  createClusterSecretStore: true
+
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
