@@ -1,0 +1,4 @@
+serviceAccount:
+  name: external-secrets-sa
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::231351515075:role/petclinic-dev-eso-role"
