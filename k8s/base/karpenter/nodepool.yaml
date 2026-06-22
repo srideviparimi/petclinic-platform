@@ -1,0 +1,88 @@
+# NodePool and EC2NodeClass for petclinic-dev — PETPLAT-73
+#
+# Enforcement notes:
+#   - Resource limits (cpu: 8, memory: 32Gi) are REQUIRED. Without them Karpenter
+#     has no upper bound and could provision dozens of nodes on a single burst.
+#   - Subnet and security group selectors use karpenter.sh/discovery tags.
+#     These tags MUST be set in the VPC Terraform module on subnets and node SG.
+#     Missing tags cause silent provisioning failures — Karpenter finds no resources.
+#   - instanceProfile name MUST match petclinic-{env}-karpenter-node-profile exactly.
+#     This is the profile created by terraform/modules/karpenter. A mismatch means
+#     the node launches but the kubelet cannot authenticate to the cluster.
+#
+# Capacity type: on-demand only while the Graviton free trial is active (until Dec 2026).
+# Switch to spot by applying nodepool-spot-dev.yaml when the trial expires.
+---
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: default
+  labels:
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  template:
+    spec:
+      requirements:
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["arm64"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          # on-demand only — Graviton t4g free trial active until Dec 2026.
+          # No cost benefit from spot while free trial covers on-demand hours.
+          values: ["on-demand"]
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values: ["t4g.small", "t4g.medium"]
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
+
+  # Hard upper bound on Karpenter-managed capacity.
+  # Without limits, a single large workload can trigger unbounded node provisioning.
+  limits:
+    cpu: "8"
+    memory: 32Gi
+
+  disruption:
+    # WhenEmptyOrUnderutilized: consolidate nodes that are empty OR have low utilisation.
+    # Replaces WhenUnderutilized from v1beta1 — covers both idle and underused nodes.
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 30s
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: default
+  labels:
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  # AL2023 replaces Amazon Linux 2 for new EKS nodes — uses containerd, systemd.
+  amiSelectorTerms:
+    - alias: al2023@latest
+
+  # Subnet discovery via karpenter.sh/discovery tag.
+  # The VPC Terraform module MUST tag subnets with: karpenter.sh/discovery = petclinic-dev
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: petclinic-dev
+
+  # Security group discovery via karpenter.sh/discovery tag.
+  # The VPC Terraform module MUST tag the node SG with: karpenter.sh/discovery = petclinic-dev
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: petclinic-dev
+
+  # Instance profile MUST match exactly — created by terraform/modules/karpenter.
+  # A mismatch causes node launch to succeed but kubelet authentication to fail.
+  instanceProfile: petclinic-dev-karpenter-node-profile
+
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 20Gi
+        volumeType: gp3
+        encrypted: true

@@ -45,3 +45,14 @@ variable "alb_zone_id" {
     error_message = "alb_zone_id must be empty or a valid Route 53 zone ID (e.g. Z215JYRZR1TBD5)."
   }
 }
+
+variable "budget_alert_email" {
+  description = "Email address for AWS Budget threshold notifications (50%, 80%, 100% of $100/month). Pass via TF_VAR_budget_alert_email."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.budget_alert_email == "" || can(regex("^[^@]+@[^@]+\\.[^@]+$", var.budget_alert_email))
+    error_message = "budget_alert_email must be empty or a valid email address."
+  }
+}

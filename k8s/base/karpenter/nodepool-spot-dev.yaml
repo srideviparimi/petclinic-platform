@@ -1,0 +1,58 @@
+# Spot NodePool override for dev — PETPLAT-74
+#
+# Apply this file AFTER the Graviton free trial expires to enable Spot savings.
+# Do NOT apply while the free trial is active — spot provides no cost benefit
+# over on-demand during the trial period (750 hrs/month free until Dec 2026).
+#
+# Usage:
+#   kubectl apply -f k8s/base/karpenter/nodepool-spot-dev.yaml
+#
+# This replaces the default NodePool (same name "default") with spot + on-demand
+# capacity type. Karpenter's spot diversification selects the cheapest available
+# instance type from the allowed list. Expected savings: 60-70% on compute.
+#
+# The EC2NodeClass is identical to nodepool.yaml — only the NodePool capacity-type
+# requirement changes. No need to re-apply the EC2NodeClass.
+---
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: default
+  labels:
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  template:
+    spec:
+      requirements:
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["arm64"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          # spot preferred, on-demand as fallback when spot is unavailable.
+          # Karpenter uses the SQS interruption queue to drain nodes before
+          # spot termination — apply only after the karpenter module is deployed.
+          values: ["spot", "on-demand"]
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          # t4g.medium included alongside t4g.small to improve spot availability.
+          # More instance types = more spot capacity pools = fewer interruptions.
+          values: ["t4g.small", "t4g.medium"]
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
+
+  limits:
+    cpu: "8"
+    memory: 32Gi
+
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 30s
+
+  # Weight: higher value = this NodePool preferred over any other pools.
+  # Karpenter schedules pods on the pool with the highest weight that satisfies
+  # pod requirements — ensures spot is tried before any on-demand-only pools.
+  weight: 10

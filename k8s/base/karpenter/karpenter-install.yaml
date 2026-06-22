@@ -1,0 +1,65 @@
+# Karpenter Installation — PETPLAT-73
+#
+# This is NOT a kubectl-apply manifest. Run the Helm command below after:
+#   1. terraform apply in terraform/environments/dev/ (creates IAM role, SQS queue, instance profile)
+#   2. kubectl configured: aws eks update-kubeconfig --name petclinic-dev-eks --region eu-central-1
+#   3. Karpenter CRDs installed (done automatically by the Helm chart)
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Install command — values resolved from dev terraform outputs (2026-06-23)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# helm upgrade --install karpenter oci://public.ecr.aws/karpenter/karpenter \
+#   --version 1.0.0 \
+#   --namespace kube-system \
+#   --set settings.clusterName=petclinic-dev-eks \
+#   --set settings.interruptionQueue=petclinic-dev-karpenter-interruption \
+#   --set "serviceAccount.annotations.eks\.amazonaws\.com/role-arn=arn:aws:iam::231351515075:role/petclinic-dev-karpenter-role" \
+#   --wait
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Values explained
+# ─────────────────────────────────────────────────────────────────────────────
+#
+#   settings.clusterName
+#     Source: terraform output -raw cluster_name
+#     Value:  petclinic-dev-eks
+#
+#   settings.interruptionQueue
+#     Source: terraform output -raw karpenter_queue_name  (after karpenter module is applied)
+#     Value:  petclinic-dev-karpenter-interruption
+#     Note:   This SQS queue receives spot interruption, rebalance, state-change, and
+#             scheduled health events from EventBridge. Without it, spot terminations
+#             are not handled gracefully and pods may be lost without drain.
+#
+#   serviceAccount.annotations.eks.amazonaws.com/role-arn
+#     Source: terraform output -raw karpenter_role_arn  (after karpenter module is applied)
+#     Value:  arn:aws:iam::231351515075:role/petclinic-dev-karpenter-role
+#     Note:   IRSA role with ec2:*, iam:PassRole (scoped to node role), ssm:GetParameter,
+#             pricing:GetProducts, sqs:*, eks:DescribeCluster permissions.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Retrieve live values dynamically (recommended — run from terraform/environments/dev/)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# helm upgrade --install karpenter oci://public.ecr.aws/karpenter/karpenter \
+#   --version 1.0.0 \
+#   --namespace kube-system \
+#   --set settings.clusterName=$(terraform output -raw cluster_name) \
+#   --set settings.interruptionQueue=$(terraform output -raw karpenter_queue_name) \
+#   --set "serviceAccount.annotations.eks\.amazonaws\.com/role-arn=$(terraform output -raw karpenter_role_arn)" \
+#   --wait
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# After install — apply NodePool and EC2NodeClass
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# kubectl apply -f k8s/base/karpenter/nodepool.yaml
+#
+# Verify Karpenter is running:
+#   kubectl get pods -n kube-system -l app.kubernetes.io/name=karpenter
+#   kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter --tail=50
+#
+# Verify NodePool and EC2NodeClass:
+#   kubectl get nodepool
+#   kubectl get ec2nodeclass

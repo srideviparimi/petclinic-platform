@@ -87,3 +87,52 @@ module "dns" {
   alb_dns_name = var.alb_dns_name
   alb_zone_id  = var.alb_zone_id
 }
+
+module "karpenter" {
+  source = "../../modules/karpenter"
+
+  project           = var.project
+  environment       = var.environment
+  cluster_name      = module.eks.cluster_name
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
+  node_role_arn     = module.eks.node_role_arn
+}
+
+# Budget is skipped when budget_alert_email is unset — AWS rejects notifications
+# with empty subscriber_email_addresses. Set TF_VAR_budget_alert_email to enable.
+resource "aws_budgets_budget" "monthly" {
+  count = var.budget_alert_email != "" ? 1 : 0
+
+  name         = "${var.project}-${var.environment}-monthly-budget"
+  budget_type  = "COST"
+  limit_amount = "100"
+  limit_unit   = "USD"
+  time_unit    = "MONTHLY"
+
+  time_period_start = "2024-01-01_00:00"
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 50
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = [var.budget_alert_email]
+  }
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 80
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = [var.budget_alert_email]
+  }
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 100
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = [var.budget_alert_email]
+  }
+}
