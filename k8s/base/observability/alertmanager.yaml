@@ -1,0 +1,179 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/part-of: petclinic-observability
+    app.kubernetes.io/managed-by: kubectl
+data:
+  alertmanager.yml: |
+    global:
+      smtp_smarthost: 'smtp.example.com:587'
+      smtp_from: 'alertmanager@petclinic.example.com'
+      smtp_require_tls: true
+      resolve_timeout: 5m
+
+    route:
+      group_by: ['alertname', 'severity', 'namespace']
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 1h
+      receiver: 'email-default'
+      routes:
+        # Critical alerts: notify immediately with short repeat interval
+        - matchers:
+            - severity = critical
+          receiver: 'email-critical'
+          group_wait: 0s
+          group_interval: 1m
+          repeat_interval: 15m
+
+        # Warning alerts: batch with 5-minute group interval
+        - matchers:
+            - severity = warning
+          receiver: 'email-warning'
+          group_wait: 30s
+          group_interval: 5m
+          repeat_interval: 4h
+
+    receivers:
+      - name: 'email-default'
+        email_configs:
+          - to: 'team@petclinic.example.com'
+            send_resolved: true
+            headers:
+              Subject: '[{{ .Status | toUpper }}] Petclinic Alert: {{ .GroupLabels.alertname }}'
+
+      - name: 'email-critical'
+        email_configs:
+          - to: 'oncall@petclinic.example.com'
+            send_resolved: true
+            headers:
+              Subject: '[CRITICAL] Petclinic Alert: {{ .GroupLabels.alertname }}'
+            html: |
+              {{ range .Alerts }}
+              <b>Alert:</b> {{ .Labels.alertname }}<br/>
+              <b>Severity:</b> {{ .Labels.severity }}<br/>
+              <b>Summary:</b> {{ .Annotations.summary }}<br/>
+              <b>Description:</b> {{ .Annotations.description }}<br/>
+              <b>Starts at:</b> {{ .StartsAt }}<br/>
+              {{ end }}
+
+      - name: 'email-warning'
+        email_configs:
+          - to: 'team@petclinic.example.com'
+            send_resolved: true
+            headers:
+              Subject: '[WARNING] Petclinic Alert: {{ .GroupLabels.alertname }}'
+
+    # Inhibit warning alerts for services that are already critical (down)
+    inhibit_rules:
+      - source_matchers:
+          - severity = critical
+          - alertname = ServiceDown
+        target_matchers:
+          - severity = warning
+        equal: ['job']
+
+      - source_matchers:
+          - severity = critical
+        target_matchers:
+          - severity = warning
+        equal: ['alertname', 'namespace', 'pod']
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/part-of: petclinic-observability
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alertmanager
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: alertmanager
+        app.kubernetes.io/part-of: petclinic-observability
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup: 65534
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.26.0
+          args:
+            - --config.file=/etc/alertmanager/alertmanager.yml
+            - --storage.path=/alertmanager
+            - --web.external-url=http://localhost:9093
+          ports:
+            - name: web
+              containerPort: 9093
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alertmanager
+              readOnly: true
+            - name: storage
+              mountPath: /alertmanager
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9093
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9093
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: false
+      volumes:
+        - name: config
+          configMap:
+            name: alertmanager-config
+        - name: storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/part-of: petclinic-observability
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  selector:
+    app.kubernetes.io/name: alertmanager
+  ports:
+    - name: web
+      port: 9093
+      targetPort: 9093
+      protocol: TCP
+  type: ClusterIP

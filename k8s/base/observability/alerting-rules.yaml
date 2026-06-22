@@ -1,0 +1,105 @@
+# PrometheusRule CRDs — requires monitoring.coreos.com/v1 CRD to be installed first:
+#   kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_prometheusrules.yaml
+#
+# These rules are also embedded directly in the prometheus-config ConfigMap so standalone
+# Prometheus (without the Prometheus Operator) can evaluate them from alert-rules.yaml.
+#
+# PromQL expressions match the technical spec exactly — do not modify without updating
+# the spec and the embedded rules in prometheus.yaml.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: petclinic-metric-alerts
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: petclinic-observability
+    app.kubernetes.io/managed-by: kubectl
+    role: alert-rules
+spec:
+  groups:
+    - name: petclinic.metric-alerts
+      interval: 15s
+      rules:
+        - alert: ServiceDown
+          expr: up == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Service {{ $labels.job }} is down"
+            description: "{{ $labels.job }} has been unreachable for more than 1 minute"
+
+        - alert: HighErrorRate
+          expr: rate(http_server_requests_seconds_count{status=~"5.."}[5m]) / rate(http_server_requests_seconds_count[5m]) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High 5xx error rate on {{ $labels.job }}"
+            description: "{{ $labels.job }} has >5% 5xx error rate over the last 5 minutes"
+
+        - alert: HighLatency
+          expr: histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m])) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High p95 latency on {{ $labels.job }}"
+            description: "p95 latency is above 500ms for {{ $labels.job }} over the last 5 minutes"
+
+        - alert: PodRestartLoop
+          expr: increase(kube_pod_container_status_restarts_total[15m]) > 3
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is in a restart loop"
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} restarted more than 3 times in 15 minutes"
+
+        - alert: HighMemoryUsage
+          expr: container_memory_working_set_bytes / container_spec_memory_limit_bytes > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High memory usage in {{ $labels.namespace }}/{{ $labels.pod }}"
+            description: "Container {{ $labels.container }} memory working set is above 80% of its limit"
+---
+# Loki alert rules in PrometheusRule format — evaluated by Loki's ruler component.
+# Loki ruler reads these from /loki/rules/fake/ (single-tenant "fake" org) and forwards
+# firing alerts to Alertmanager at http://alertmanager.monitoring:9093.
+# These LogQL expressions are also embedded in the loki-config ConfigMap.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: petclinic-loki-alerts
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: loki
+    app.kubernetes.io/part-of: petclinic-observability
+    app.kubernetes.io/managed-by: kubectl
+    role: loki-alert-rules
+spec:
+  groups:
+    - name: petclinic.loki-alerts
+      rules:
+        - alert: LogErrorSpike
+          expr: rate({namespace=~"petclinic-.*"} |= "ERROR" [5m]) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+            datasource: loki
+          annotations:
+            summary: "High ERROR log rate in petclinic namespaces"
+            description: "Error log rate exceeds 0.5/s for 5 minutes in {{ $labels.namespace }}"
+
+        - alert: JVMOutOfMemory
+          expr: count_over_time({namespace=~"petclinic-.*"} |= "OutOfMemoryError" [5m]) > 0
+          for: 0m
+          labels:
+            severity: critical
+            datasource: loki
+          annotations:
+            summary: "JVM OutOfMemoryError detected in petclinic namespaces"
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} logged an OutOfMemoryError"

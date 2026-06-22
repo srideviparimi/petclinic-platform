@@ -18,6 +18,8 @@ module "eks" {
   subnet_ids    = module.vpc.public_subnet_ids
   cluster_sg_id = module.vpc.eks_cluster_sg_id
   node_sg_id    = module.vpc.eks_node_sg_id
+
+  node_desired_size = 4
 }
 
 module "ecr" {
