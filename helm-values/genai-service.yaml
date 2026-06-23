@@ -15,6 +15,8 @@ replicaCount: 1
 configData:
   CONFIG_SERVER_URL: "http://config-server:8888"
   EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://discovery-server:8761/eureka/"
+  MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: "http://zipkin.tracing:9411/api/v2/spans"
+  MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "1.0"
 
 # OpenAI API key synced from AWS Secrets Manager via External Secrets Operator
 # optional: true — service falls back to OPENAI_API_KEY=demo if secret is missing

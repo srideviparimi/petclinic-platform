@@ -16,6 +16,8 @@ configData:
   CONFIG_SERVER_URL: "http://config-server:8888"
   SPRING_DATASOURCE_URL: "jdbc:mysql://petclinic-dev-mysql.cpm0giwisfm1.eu-central-1.rds.amazonaws.com:3306/petclinic"
   EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://discovery-server:8761/eureka/"
+  MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: "http://zipkin.tracing:9411/api/v2/spans"
+  MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "1.0"
 
 # RDS credentials synced from AWS Secrets Manager via External Secrets Operator
 secretEnv:
